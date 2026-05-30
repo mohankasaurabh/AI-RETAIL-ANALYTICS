@@ -9,6 +9,7 @@ let tool = "polygon";
 let draft = [];            // points in FRAME coords
 let rectStart = null;
 let zones = [];            // existing zones
+let frozen = false;        // freeze the snapshot background for drawing
 let popChart, dwellChart, hourlyChart;
 
 const canvas = document.getElementById("zone-canvas");
@@ -79,11 +80,11 @@ function redraw() {
         drawPoly(z.points, z.color || "#38bdf8", z.name);
     });
 
-    // draft
+    // draft (high-contrast yellow so it stands out over zones/video)
     if (draft.length) {
-        ctx.fillStyle = "rgba(0,255,153,0.25)";
-        ctx.strokeStyle = "#00ff99";
-        ctx.lineWidth = 2;
+        ctx.fillStyle = "rgba(255,212,0,0.30)";
+        ctx.strokeStyle = "#ffd400";
+        ctx.lineWidth = 3;
         ctx.beginPath();
         draft.forEach((p, i) => {
             const [cx, cy] = toCanvas(p[0], p[1]);
@@ -93,8 +94,11 @@ function redraw() {
         ctx.fill(); ctx.stroke();
         draft.forEach(p => {
             const [cx, cy] = toCanvas(p[0], p[1]);
-            ctx.fillStyle = "#00ff99";
-            ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+            // dark outline + bright fill for visibility on any background
+            ctx.fillStyle = "#ffd400";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         });
     }
 }
@@ -132,6 +136,8 @@ async function loadCameras() {
 
 async function selectCamera(id) {
     cameraId = id;
+    frozen = false;              // new camera -> resume live preview
+    updateFreezeBtn();
     // ensure frames exist for the snapshot background
     API.post(`/api/sources/${id}/start`).catch(() => {});
     refreshBg();
@@ -141,8 +147,32 @@ async function selectCamera(id) {
 }
 
 function refreshBg() {
+    if (frozen) return;               // keep the frame still while drawing
     if (cameraId) bg.src = `/api/sources/${cameraId}/snapshot?t=${Date.now()}`;
 }
+
+function updateFreezeBtn() {
+    const btn = document.getElementById("freeze-btn");
+    if (!btn) return;
+    if (frozen) {
+        btn.textContent = "▶ Live";
+        btn.classList.remove("btn-outline"); btn.classList.add("btn");
+    } else {
+        btn.textContent = "⏸ Freeze Frame";
+        btn.classList.remove("btn"); btn.classList.add("btn-outline");
+    }
+}
+
+function toggleFreeze() {
+    frozen = !frozen;
+    updateFreezeBtn();
+    if (!frozen) refreshBg();         // grab a fresh frame when going live again
+    const hint = document.getElementById("zone-hint");
+    if (hint) hint.textContent = frozen
+        ? "Frame frozen — draw your zone, then Save."
+        : "Pick a tool, click to draw, then Save.";
+}
+window.toggleFreeze = toggleFreeze;
 
 async function loadZones() {
     zones = await API.get(`/api/cameras/${cameraId}/zones`);

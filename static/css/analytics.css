@@ -23,6 +23,11 @@
     left: 0;
     pointer-events: none;
 }
+/* the zone editor canvas must receive clicks for drawing */
+#zone-canvas {
+    pointer-events: auto;
+    cursor: crosshair;
+}
 
 /* Heatmap legend */
 .legend {
