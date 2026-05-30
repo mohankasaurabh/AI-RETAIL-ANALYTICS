@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Live Monitoring | AI Retail Analytics{% endblock %}
+
+{% block content %}
+{% from 'components/cards.html' import kpi %}
+
+<!-- aggregate live KPIs (updated via websocket.js) -->
+<div class="cards">
+    {{ kpi('Occupancy', 'occupancy', '👥') }}
+    {{ kpi('Total Entries', 'entries', '🚪') }}
+    {{ kpi('Unique Customers', 'total_tracks', '🧍') }}
+    {{ kpi('ReID Identities', 'reid_identities', '🔁') }}
+    {{ kpi('Queue Length', 'queue_length', '⏳') }}
+    {{ kpi('Multi-Camera', 'multi_camera_customers', '🎥') }}
+</div>
+
+<div class="controls-row" style="justify-content:space-between;">
+    <span class="muted">Per-camera live AI pipeline · bounding boxes · ReID · zones · dwell (heatmaps on the Heatmaps page)</span>
+    <button class="btn-outline" onclick="startAll()">Start All</button>
+</div>
+
+<!-- per-camera live feed grid -->
+<div id="live-grid" class="snapshot-grid"
+     style="grid-template-columns:repeat(auto-fill,minmax(420px,1fr));">
+    <p class="muted">Loading cameras…</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pages/live.js"></script>
+{% endblock %}

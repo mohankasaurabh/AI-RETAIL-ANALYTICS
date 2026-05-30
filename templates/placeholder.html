@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}{{ module }} | AI Retail Analytics{% endblock %}
+{% block content %}
+<div class="panel" style="text-align:center; padding:70px 30px;">
+    <div style="font-size:52px;">{{ icon|default('🚧') }}</div>
+    <h2 style="border:none; justify-content:center; margin-top:14px;">{{ module }}</h2>
+    <p class="muted" style="max-width:520px; margin:10px auto 0;">
+        {{ note|default('This module is part of the modular restructuring and is delivered in an upcoming phase.') }}
+    </p>
+</div>
+{% endblock %}

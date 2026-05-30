@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Camera Sources | AI Retail Analytics{% endblock %}
+
+{% block content %}
+{% set page_title = 'Camera & Media Sources' %}
+
+<!-- summary + add -->
+<div class="controls-row" style="justify-content:space-between;">
+    <div class="controls-row" id="filter-tabs" style="margin:0;">
+        <div class="chip active" data-filter="all">All</div>
+        <div class="chip" data-filter="active">Active</div>
+        <div class="chip" data-filter="processing">Processing</div>
+        <div class="chip" data-filter="offline">Offline</div>
+        <div class="chip" data-filter="stopped">Stopped</div>
+    </div>
+    <button class="btn" onclick="openSourceModal()">+ Add Source</button>
+</div>
+
+<div class="cards" style="margin-top:6px;">
+    <div class="card"><div class="card-icon">🎥</div><h3>Total Sources</h3><p id="s-total">0</p></div>
+    <div class="card"><div class="card-icon">🟢</div><h3>Active</h3><p id="s-active">0</p></div>
+    <div class="card"><div class="card-icon">🟠</div><h3>Processing</h3><p id="s-processing">0</p></div>
+    <div class="card"><div class="card-icon">🔴</div><h3>Offline</h3><p id="s-offline">0</p></div>
+</div>
+
+<!-- source grid -->
+<div id="sources-grid" class="snapshot-grid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr));">
+    <p class="muted">Loading sources…</p>
+</div>
+
+<!-- ============ ADD / EDIT MODAL ============ -->
+<div class="modal-overlay" id="source-modal">
+    <div class="modal">
+        <div class="modal-head">
+            <h2 id="modal-title">Add Source</h2>
+            <button class="btn-ghost" onclick="closeSourceModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="f-id">
+
+            <label>Source Name</label>
+            <input type="text" id="f-name" placeholder="e.g. Entrance Cam">
+
+            <label>Source Type</label>
+            <select id="f-type" onchange="onTypeChange()">
+                <option value="video">Video File</option>
+                <option value="webcam">Webcam / USB</option>
+                <option value="rtsp">RTSP Stream</option>
+                <option value="ip">IP Camera</option>
+                <option value="nvr">NVR / DVR</option>
+            </select>
+
+            <div id="uri-row">
+                <label id="uri-label">Stream URL / Path</label>
+                <input type="text" id="f-uri" placeholder="rtsp://user:pass@ip:554/stream">
+            </div>
+
+            <div id="upload-row" style="display:none;">
+                <label>Upload Video (MP4 / AVI / MOV)</label>
+                <input type="file" id="f-file" accept=".mp4,.avi,.mov,.mkv">
+            </div>
+
+            <div class="form-2col">
+                <div>
+                    <label>Location</label>
+                    <input type="text" id="f-location" placeholder="e.g. Main Hall">
+                </div>
+                <div>
+                    <label>Resolution</label>
+                    <input type="text" id="f-resolution" value="1280x720">
+                </div>
+            </div>
+
+            <label>Target FPS</label>
+            <input type="number" id="f-fps" value="10" min="1" max="30">
+
+            <label>AI Models Enabled</label>
+            <div class="toggle-grid" id="f-models">
+                <label class="toggle"><input type="checkbox" data-model="detection" checked> Detection</label>
+                <label class="toggle"><input type="checkbox" data-model="tracking" checked> Tracking</label>
+                <label class="toggle"><input type="checkbox" data-model="reid" checked> ReID</label>
+                <label class="toggle"><input type="checkbox" data-model="demographics" checked> Demographics</label>
+                <label class="toggle"><input type="checkbox" data-model="heatmap" checked> Heatmap</label>
+                <label class="toggle"><input type="checkbox" data-model="zones" checked> Zones</label>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-outline" onclick="closeSourceModal()">Cancel</button>
+            <button class="btn" id="modal-save" onclick="saveSource()">Save</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pages/sources.js"></script>
+{% endblock %}

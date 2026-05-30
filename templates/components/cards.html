@@ -1,0 +1,16 @@
+{# ===================================================== #}
+{# KPI Card Macro                                         #}
+{# Usage:                                                 #}
+{#   {% from 'components/cards.html' import kpi %}        #}
+{#   {{ kpi('Occupancy', 'occupancy', '👥') }}           #}
+{# The <p id="..."> is updated live by websocket.js /     #}
+{# dashboard.js.                                          #}
+{# ===================================================== #}
+
+{% macro kpi(title, dom_id, icon='', suffix='') %}
+<div class="card">
+    <div class="card-icon">{{ icon }}</div>
+    <h3>{{ title }}</h3>
+    <p id="{{ dom_id }}">0{{ suffix }}</p>
+</div>
+{% endmacro %}

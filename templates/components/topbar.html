@@ -1,0 +1,46 @@
+{# ===================================================== #}
+{# Shared Topbar — store selector, date range,           #}
+{# notifications, user profile, theme toggle.            #}
+{# Variables: page_title, page_subtitle                  #}
+{# ===================================================== #}
+
+<div class="topbar">
+
+    <div class="topbar-titles">
+        <h1>{{ page_title|default('Dashboard') }}</h1>
+        <p>{{ page_subtitle|default('Real-Time AI Retail Analytics') }}</p>
+    </div>
+
+    <div class="topbar-actions">
+
+        <select id="store-select" class="topbar-select" title="Store">
+            <option value="1">Default Store</option>
+        </select>
+
+        <select id="range-select" class="topbar-select" title="Date range">
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="all" selected>All Time</option>
+        </select>
+
+        <div class="notif" id="notif">
+            <button class="btn-ghost" id="notif-btn" title="Alerts">
+                🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span>
+            </button>
+            <div class="notif-dropdown" id="notif-dropdown">
+                <div class="notif-head">Alerts</div>
+                <div id="notif-list"><p class="muted" style="padding:10px">No alerts</p></div>
+            </div>
+        </div>
+
+        <button id="theme-toggle" class="btn-ghost" title="Toggle theme">🌙</button>
+
+        <div class="profile">
+            <span class="avatar">A</span>
+            <span class="profile-name">admin</span>
+        </div>
+
+    </div>
+</div>

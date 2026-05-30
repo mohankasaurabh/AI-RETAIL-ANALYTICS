@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Customer Analytics | AI Retail Analytics{% endblock %}
+
+{% block content %}
+{% from 'components/cards.html' import kpi %}
+
+<div class="cards">
+    {{ kpi('Total Customers', 'c-total', '🧍') }}
+    {{ kpi('Returning', 'c-returning', '🔁') }}
+    {{ kpi('Male', 'c-male', '👨') }}
+    {{ kpi('Female', 'c-female', '👩') }}
+</div>
+
+<div class="grid-2">
+    <div class="chart-section"><h2>Gender Distribution</h2>
+        <div class="chart-wrap" style="height:260px;"><canvas id="genderChart"></canvas></div></div>
+    <div class="chart-section"><h2>Age Distribution</h2>
+        <div class="chart-wrap" style="height:260px;"><canvas id="ageChart"></canvas></div></div>
+</div>
+
+<!-- customer table -->
+<div class="panel">
+    <h2>Customers</h2>
+    <table class="data-table">
+        <thead><tr>
+            <th>ID</th><th>Entry</th><th>Exit</th><th>Dwell (s)</th>
+            <th>Zones Visited</th><th>Gender</th><th>Age</th><th>Visits</th>
+        </tr></thead>
+        <tbody id="cust-body"><tr><td colspan="8" class="muted">No customers yet — run a camera.</td></tr></tbody>
+    </table>
+</div>
+
+<div class="grid-2">
+    <!-- detail drawer -->
+    <div class="panel">
+        <h2>Customer Detail</h2>
+        <div id="cust-detail"><p class="muted">Click a customer row to see their journey.</p></div>
+    </div>
+
+    <!-- returning visitors -->
+    <div class="panel">
+        <h2>Returning Visitors</h2>
+        <table class="data-table">
+            <thead><tr><th>ID</th><th>Visits</th><th>Avg Stay (s)</th><th>Last Seen</th></tr></thead>
+            <tbody id="returning-body"><tr><td colspan="4" class="muted">None yet.</td></tr></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pages/customers.js"></script>
+{% endblock %}

@@ -1,0 +1,112 @@
+/* =====================================================
+   Analytics / Heatmap / Reports page extras
+   Loaded in addition to style.css
+   ===================================================== */
+
+/* Heatmap canvas overlay */
+.heatmap-stage {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+.heatmap-stage img,
+.heatmap-stage canvas {
+    display: block;
+    width: 100%;
+}
+.heatmap-stage canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+/* Heatmap legend */
+.legend {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+.legend .scale {
+    flex: 1;
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #2563eb, #22c55e, #eab308, #ef4444);
+}
+
+/* Zone ranking bars */
+.zone-bar {
+    margin-bottom: 12px;
+}
+.zone-bar .label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+.zone-bar .track {
+    background: var(--panel-2);
+    border-radius: 8px;
+    height: 12px;
+    overflow: hidden;
+}
+.zone-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius: 8px;
+    transition: width 0.5s;
+}
+
+/* Journey timeline */
+.journey-timeline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.journey-node {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+}
+.journey-arrow { color: var(--accent); font-weight: 800; }
+
+/* Reports filter chips */
+.chip {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    cursor: pointer;
+    font-size: 13px;
+}
+.chip.active {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #06251a;
+    font-weight: 700;
+    border-color: transparent;
+}
+
+.export-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+.export-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+}
+.export-card .ico { font-size: 34px; }
+.export-card h3 { margin: 10px 0; font-size: 16px; }

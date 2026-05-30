@@ -1,373 +1,73 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
+{% block title %}Dashboard | AI Retail Analytics{% endblock %}
 
-<head>
+{% block content %}
+{% set page_title = 'Executive Dashboard' %}
 
-    <meta charset="UTF-8">
+{% from 'components/cards.html' import kpi %}
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+<!-- ===================== KPI CARDS ===================== -->
+<div class="cards">
+    {{ kpi('Current Footfall', 'kpi-footfall', '👣') }}
+    {{ kpi("Today's Visitors", 'kpi-today', '🧍') }}
+    {{ kpi('Peak Hour', 'kpi-peak', '⏰') }}
+    {{ kpi('Avg Dwell (s)', 'kpi-dwell', '⏱️') }}
+    {{ kpi('Active Cameras', 'kpi-cameras', '🎥') }}
+    {{ kpi('Active Zones', 'kpi-zones', '📐') }}
+</div>
 
-    <title>
-        AI Retail Analytics Platform
-    </title>
+<div class="grid-2">
 
-    <link rel="stylesheet"
-          href="/static/css/dashboard.css">
+    <!-- ===================== REALTIME OVERVIEW ===================== -->
+    <div class="panel">
+        <h2>Real-Time Overview</h2>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <div class="muted">Live Visitor Count</div>
+        <p style="font-size:42px; font-weight:800; color:var(--accent); margin:4px 0 14px;">
+            <span id="rt-live">0</span>
+        </p>
 
-</head>
+        <div class="muted">Male / Female Ratio</div>
+        <div class="ratio-bar">
+            <span class="male" id="rt-male-bar" style="width:50%">M 0</span>
+            <span class="female" id="rt-female-bar" style="width:50%">F 0</span>
+        </div>
 
-<body>
-
-    <!-- ===================================== -->
-    <!-- SIDEBAR -->
-    <!-- ===================================== -->
-
-    <div class="sidebar">
-
-        <h2>
-            AI Retail
-        </h2>
-
-        <ul>
-
-            <li>Dashboard</li>
-
-            <li>Live Analytics</li>
-
-            <li>Heatmaps</li>
-
-            <li>Zone Analytics</li>
-
-            <li>Customer Flow</li>
-
-            <li>
-
-                <a href="/export_report"
-                   style="color:white;text-decoration:none;">
-
-                    Export Report
-
-                </a>
-
-            </li>
-
-            <li>Settings</li>
-
-        </ul>
-
+        <div class="muted" style="margin-top:14px;">Age Group Distribution</div>
+        <div class="chart-wrap" style="height:200px;">
+            <canvas id="ageChart"></canvas>
+        </div>
     </div>
 
-    <!-- ===================================== -->
-    <!-- MAIN CONTENT -->
-    <!-- ===================================== -->
-
-    <div class="main-content">
-
-        <!-- HEADER -->
-
-        <div class="header">
-
-            <h1>
-                Enterprise Retail Intelligence
-            </h1>
-
-            <p>
-                Real-Time AI Retail Analytics Platform
-            </p>
-
+    <!-- ===================== SYSTEM HEALTH + ALERTS ===================== -->
+    <div class="panel">
+        <h2>System Health</h2>
+        <div class="health-row">
+            <span id="h-writer" class="ok">●</span> Database writer
+        </div>
+        <div class="health-row">
+            <span id="h-cams" class="ok">●</span>
+            Cameras online: <b id="h-cams-count">0 / 0</b>
+        </div>
+        <div class="health-row">
+            <span class="ok">●</span> AI engine: <b>operational</b>
         </div>
 
-        <!-- ===================================== -->
-        <!-- KPI CARDS -->
-        <!-- ===================================== -->
-
-        <div class="cards">
-
-            <div class="card">
-                <h3>Occupancy</h3>
-                <p id="occupancy">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Entries</h3>
-                <p id="entries">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Exits</h3>
-                <p id="exits">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Active Customers</h3>
-                <p id="active_customers">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Zone Occupancy</h3>
-                <p id="zone_occupancy">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Total Tracks</h3>
-                <p id="total_tracks">0</p>
-            </div>
-
-            <div class="card">
-                <h3>ReID Identities</h3>
-                <p id="reid_identities">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Male Customers</h3>
-                <p id="male_count">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Female Customers</h3>
-                <p id="female_count">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Customer Journeys</h3>
-                <p id="journey_customers">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Queue Length</h3>
-                <p id="queue_length">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Average Wait</h3>
-                <p id="average_wait">0s</p>
-            </div>
-
-            <div class="card">
-                <h3>Queue Status</h3>
-                <p id="queue_status">LOW</p>
-            </div>
-
-            <div class="card">
-                <h3>Cross-Camera Customers</h3>
-                <p id="cross_camera_customers">0</p>
-            </div>
-
-            <div class="card">
-                <h3>Multi-Camera id</h3>
-                <p id="multi_camera_customers">0</p>
-            </div>
-
-        </div>
-
-        <!-- ===================================== -->
-        <!-- VIDEO SECTION -->
-        <!-- ===================================== -->
-
-        <div class="video-section">
-
-            <!-- VIDEO PANEL -->
-
-            <div class="video-panel">
-
-                <h2>
-                    Live Retail Stream
-                </h2>
-
-                <!-- CAMERA CONTROLS -->
-
-                <div class="camera-controls">
-
-                    <select id="camera-select">
-
-                        <option value="mall">
-                            Mall Video
-                        </option>
-
-                        <option value="webcam">
-                            Webcam
-                        </option>
-
-                        <option value="rtsp">
-                            RTSP Camera
-                        </option>
-
-                    </select>
-
-                    <button onclick="changeCamera()">
-                        Switch Camera
-                    </button>
-
-                    <button onclick="pauseStream()">
-                        Pause
-                    </button>
-
-                    <button onclick="playStream()">
-                        Play
-                    </button>
-
-                    <button onclick="restartStream()">
-                        Restart
-                    </button>
-
-                </div>
-
-                <!-- RTSP PANEL -->
-
-                <div class="rtsp-panel">
-
-                    <input
-                        type="text"
-                        id="rtsp_url"
-                        placeholder="rtsp://username:password@ip:554/stream">
-
-                    <button onclick="connectRTSP()">
-
-                        Connect RTSP
-
-                    </button>
-
-                </div>
-
-                <!-- LIVE VIDEO -->
-
-                <img src="/video_feed"
-                     id="video-stream">
-
-            </div>
-
-            <!-- ANALYTICS SIDE PANEL -->
-
-            <div class="analytics-panel">
-
-                <h2>
-                    Analytics Summary
-                </h2>
-
-                <div class="analytics-item">
-                    Peak Activity Monitoring Active
-                </div>
-
-                <div class="analytics-item">
-                    Zone Congestion Detection Running
-                </div>
-
-                <div class="analytics-item">
-                    Heatmap Intelligence Operational
-                </div>
-
-                <div class="analytics-item">
-                    ReID Tracking System Active
-                </div>
-
-                <div class="analytics-item">
-                    Historical Analytics Logging Enabled
-                </div>
-
-                <div class="analytics-item">
-                    Multi-Camera Surveillance Ready
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- ===================================== -->
-        <!-- QUEUE ANALYTICS -->
-        <!-- ===================================== -->
-
-        <div class="chart-section">
-
-            <h2>
-                Queue Intelligence
-            </h2>
-
-            <div class="analytics-item">
-
-                Queue Length:
-                <span id="queue_length_display">
-                    0
-                </span>
-
-            </div>
-
-            <div class="analytics-item">
-
-                Average Wait:
-                <span id="average_wait_display">
-                    0s
-                </span>
-
-            </div>
-
-            <div class="analytics-item">
-
-                Queue Status:
-                <span id="queue_status_display">
-                    LOW
-                </span>
-
-            </div>
-
-        </div>
-
-        <!-- ===================================== -->
-        <!-- ZONE ANALYTICS -->
-        <!-- ===================================== -->
-
-        <div class="chart-section">
-
-            <h2>
-                Zone Analytics
-            </h2>
-
-            <div id="zone-container">
-
-                Waiting for zone data...
-
-            </div>
-
-        </div>
-
-        <!-- ===================================== -->
-        <!-- LIVE ANALYTICS CHART -->
-        <!-- ===================================== -->
-
-        <div class="chart-section">
-
-            <h2>
-                Live Retail Analytics
-            </h2>
-
-            <canvas id="occupancyChart"></canvas>
-
-        </div>
-
-        <!-- ===================================== -->
-        <!-- HISTORICAL CHART -->
-        <!-- ===================================== -->
-
-        <div class="chart-section">
-
-            <h2>
-                Historical Occupancy Analytics
-            </h2>
-
-            <canvas id="historicalChart"></canvas>
-
-        </div>
-
+        <h2 style="margin-top:22px;">Recent Alerts</h2>
+        <div id="dash-alerts"><p class="muted">No alerts</p></div>
     </div>
 
-    <!-- ===================================== -->
-    <!-- DASHBOARD JS -->
-    <!-- ===================================== -->
+</div>
 
-    <script src="/static/js/dashboard.js"></script>
+<!-- ===================== LIVE SNAPSHOT GRID ===================== -->
+<div class="panel">
+    <h2>Live Camera Snapshots</h2>
+    <div class="snapshot-grid" id="snapshot-grid">
+        <p class="muted">Loading cameras…</p>
+    </div>
+</div>
+{% endblock %}
 
-</body>
-
-</html>
+{% block scripts %}
+<script src="/static/js/pages/dashboard.js"></script>
+{% endblock %}

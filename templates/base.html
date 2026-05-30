@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Retail Analytics{% endblock %}</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/analytics.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+    {% include 'components/sidebar.html' %}
+
+    <div class="main-content">
+
+        {% include 'components/topbar.html' %}
+
+        {% block content %}{% endblock %}
+
+    </div>
+
+    <!-- core JS (shared across all pages) -->
+    <script src="/static/js/core/api.js"></script>
+    <script src="/static/js/core/state.js"></script>
+    <script src="/static/js/websocket.js"></script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

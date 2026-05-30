@@ -183,6 +183,8 @@ class FrameProcessor:
                     current_camera
                 )
             )
+            if reid_id is None:
+                continue
 
             self.queue_analytics.update(
 
@@ -327,7 +329,7 @@ class FrameProcessor:
 
 
         # =====================================
-        # UPDATE ZONE METRICSƒˇ
+        # UPDATE ZONE METRICS
         # =====================================
 
         analytics_service.update_zone_data(
@@ -350,12 +352,12 @@ class FrameProcessor:
 
         analytics_service.update_cross_camera(
 
-            self.reid_manager.total_multi_camera_customers()
+            self.reid_manager.total_identities()
         )
 
         analytics_service.update_multi_camera_metrics(
 
-            self.reid_manager.total_multi_camera_identities()
+            self.reid_manager.total_multi_camera_customers()
         )
 
 

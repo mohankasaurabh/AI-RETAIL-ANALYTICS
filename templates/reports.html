@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Reports | AI Retail Analytics{% endblock %}
+
+{% block content %}
+{% from 'components/cards.html' import kpi %}
+
+<div class="controls-row" style="justify-content:space-between;">
+    <div class="controls-row" id="report-tabs" style="margin:0;">
+        <div class="chip active" data-type="daily">Daily</div>
+        <div class="chip" data-type="weekly">Weekly</div>
+        <div class="chip" data-type="monthly">Monthly</div>
+    </div>
+    <span class="muted" id="report-window">—</span>
+</div>
+
+<!-- summary cards -->
+<div class="cards">
+    {{ kpi('Total Entries', 'r-entries', '🚪') }}
+    {{ kpi('Peak Occupancy', 'r-peak', '📈') }}
+    {{ kpi('Unique Customers', 'r-unique', '🧍') }}
+    {{ kpi('Returning', 'r-returning', '🔁') }}
+</div>
+
+<!-- export -->
+<div class="panel">
+    <h2>Export Report</h2>
+    <div class="export-grid">
+        <div class="export-card"><div class="ico">📄</div><h3>CSV</h3>
+            <p class="muted">Footfall rows</p>
+            <button class="btn" style="margin-top:10px;" onclick="exportReport('csv')">Download CSV</button></div>
+        <div class="export-card"><div class="ico">📊</div><h3>Excel</h3>
+            <p class="muted">Summary + Footfall + Zones + Demographics</p>
+            <button class="btn" style="margin-top:10px;" onclick="exportReport('excel')">Download Excel</button></div>
+        <div class="export-card"><div class="ico">📕</div><h3>PDF</h3>
+            <p class="muted">Formatted multi-section report</p>
+            <button class="btn" style="margin-top:10px;" onclick="exportReport('pdf')">Download PDF</button></div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="chart-section"><h2>Footfall (Occupancy)</h2>
+        <div class="chart-wrap" style="height:260px;"><canvas id="reportFootfall"></canvas></div></div>
+    <div class="chart-section"><h2>Demographics</h2>
+        <div class="chart-wrap" style="height:260px;"><canvas id="reportGender"></canvas></div></div>
+</div>
+
+<div class="panel">
+    <h2>Zone Performance</h2>
+    <table class="data-table">
+        <thead><tr><th>Zone</th><th>Camera</th><th>Visits</th><th>Unique</th><th>Avg Dwell (s)</th><th>Revisits</th></tr></thead>
+        <tbody id="report-zones"><tr><td colspan="6" class="muted">No data.</td></tr></tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pages/reports.js"></script>
+{% endblock %}

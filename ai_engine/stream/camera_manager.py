@@ -6,7 +6,7 @@ class CameraManager:
     def __init__(self):
 
         # =====================================
-        # AVAILABLE SOURCES
+        # CAMERA SOURCES
         # =====================================
 
         self.sources = {
@@ -34,7 +34,7 @@ class CameraManager:
         }
 
         # =====================================
-        # DEFAULT CAMERA
+        # CURRENT SOURCE
         # =====================================
 
         self.current_camera = "mall"
@@ -48,7 +48,7 @@ class CameraManager:
         )
 
     # =====================================
-    # OPEN SOURCE
+    # OPEN CAMERA SOURCE
     # =====================================
 
     def open_source(
@@ -72,28 +72,47 @@ class CameraManager:
 
         try:
 
+            # Release previous capture
+            if self.cap:
+
+                self.cap.release()
+
+            # ==========================
+            # VIDEO FILE
+            # ==========================
+
             if source_type == "video":
 
                 self.cap = cv2.VideoCapture(
                     source_path
                 )
 
+            # ==========================
+            # WEBCAM
+            # ==========================
+
             elif source_type == "webcam":
 
                 self.cap = cv2.VideoCapture(
-                    source_path
+                    int(source_path)
                 )
+
+            # ==========================
+            # RTSP
+            # ==========================
 
             elif source_type == "rtsp":
 
+                if not source_path:
+
+                    print(
+                        "[ERROR] RTSP URL empty"
+                    )
+
+                    return False
+
                 self.cap = cv2.VideoCapture(
                     source_path
-                )
-
-                # Helps reduce RTSP buffering
-                self.cap.set(
-                    cv2.CAP_PROP_BUFFERSIZE,
-                    1
                 )
 
             else:
@@ -104,6 +123,10 @@ class CameraManager:
 
                 return False
 
+            # ==========================
+            # VALIDATION
+            # ==========================
+
             if not self.cap.isOpened():
 
                 print(
@@ -112,12 +135,16 @@ class CameraManager:
 
                 return False
 
+            print(
+                f"[INFO] Opened source: {source_id}"
+            )
+
             return True
 
         except Exception as e:
 
             print(
-                f"[ERROR] Source open failed: {e}"
+                f"[ERROR] Failed opening source: {e}"
             )
 
             return False
@@ -138,9 +165,12 @@ class CameraManager:
 
         ret, frame = self.cap.read()
 
+        # =====================================
+        # LOOP VIDEO FILES
+        # =====================================
+
         if not ret:
 
-            # Loop video files
             source = self.sources[
                 self.current_camera
             ]
@@ -175,30 +205,37 @@ class CameraManager:
 
         if camera_id not in self.sources:
 
+            print(
+                f"[ERROR] Unknown camera: {camera_id}"
+            )
+
             return False
 
-        try:
+        old_camera = self.current_camera
 
-            if self.cap:
+        success = self.open_source(
+            camera_id
+        )
 
-                self.cap.release()
+        if success:
 
             self.current_camera = camera_id
 
-            return self.open_source(
-                camera_id
-            )
+            print(
+                f"[INFO] Switched to camera: {camera_id}" )
 
-        except Exception as e:
+
+        else:
+            self.current_camera = old_camera
 
             print(
-                f"[ERROR] Camera switch failed: {e}"
+                f"[INFO] Failed to switch to camera: {camera_id}"
             )
 
-            return False
+        return success
 
     # =====================================
-    # UPDATE RTSP URL
+    # RTSP URL UPDATE
     # =====================================
 
     def set_rtsp_url(
@@ -206,7 +243,9 @@ class CameraManager:
         rtsp_url
     ):
 
-        self.sources["rtsp"]["path"] = rtsp_url
+        self.sources["rtsp"][
+            "path"
+        ] = rtsp_url
 
     # =====================================
     # PAUSE
@@ -216,6 +255,10 @@ class CameraManager:
 
         self.paused = True
 
+        print(
+            "[INFO] Stream Paused"
+        )
+
     # =====================================
     # PLAY
     # =====================================
@@ -224,18 +267,26 @@ class CameraManager:
 
         self.paused = False
 
+        print(
+            "[INFO] Stream Playing"
+        )
+
     # =====================================
     # RESTART
     # =====================================
 
     def restart_camera(self):
 
-        self.switch_camera(
+        print(
+            "[INFO] Restarting Camera"
+        )
+
+        return self.open_source(
             self.current_camera
         )
 
     # =====================================
-    # CLEANUP
+    # RELEASE
     # =====================================
 
     def release(self):
@@ -243,3 +294,12 @@ class CameraManager:
         if self.cap:
 
             self.cap.release()
+
+            self.cap = None
+
+
+# =====================================
+# GLOBAL CAMERA MANAGER
+# =====================================
+
+camera_manager = CameraManager()

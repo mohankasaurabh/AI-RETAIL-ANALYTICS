@@ -2,6 +2,7 @@ ultralytics
 opencv-python
 numpy
 pandas
+openpyxl
 scipy
 supervision
 matplotlib
@@ -26,6 +27,7 @@ alembic
 torch
 torchvision
 torchaudio
+torchreid
 
 deepface
 insightface

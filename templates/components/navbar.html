@@ -1,0 +1,42 @@
+{# ===================================================== #}
+{# Shared Top Navbar / Page Header                        #}
+{# Variables: page_title, page_subtitle                   #}
+{# ===================================================== #}
+
+<div class="topbar">
+
+    <div class="topbar-titles">
+        <h1>{{ page_title|default('Enterprise Retail Intelligence') }}</h1>
+        <p>{{ page_subtitle|default('Real-Time AI Retail Analytics Platform') }}</p>
+    </div>
+
+    <div class="topbar-actions">
+        <span id="live-indicator" class="live-badge">
+            <span class="status-dot"></span> LIVE
+        </span>
+        <button id="theme-toggle" class="btn-ghost" title="Toggle theme">
+            🌙
+        </button>
+    </div>
+
+</div>
+
+<script>
+// Theme toggle (persisted) — shared across all pages
+(function () {
+    const saved = localStorage.getItem("retail-theme") || "dark";
+    if (saved === "light") {
+        document.body.classList.add("light");
+    }
+    const btn = document.getElementById("theme-toggle");
+    if (btn) {
+        btn.textContent = saved === "light" ? "☀️" : "🌙";
+        btn.addEventListener("click", function () {
+            document.body.classList.toggle("light");
+            const isLight = document.body.classList.contains("light");
+            localStorage.setItem("retail-theme", isLight ? "light" : "dark");
+            btn.textContent = isLight ? "☀️" : "🌙";
+        });
+    }
+})();
+</script>

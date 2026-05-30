@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics | AI Retail Analytics</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/analytics.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+
+    {% include 'components/sidebar.html' %}
+
+    <div class="main-content">
+
+        {% set page_title = 'Consumer Analytics' %}
+        {% set page_subtitle = 'Footfall · Demographics · Zones · Customer Journey' %}
+        {% include 'components/navbar.html' %}
+
+        {% from 'components/cards.html' import kpi %}
+
+        <!-- KPI STRIP -->
+        <div class="cards">
+            {{ kpi('Total Entries', 'entries', '🚪') }}
+            {{ kpi('Unique Customers', 'total_tracks', '🧍') }}
+            {{ kpi('Returning (ReID)', 'reid_identities', '🔁') }}
+            {{ kpi('Male', 'male_count', '👨') }}
+            {{ kpi('Female', 'female_count', '👩') }}
+            {{ kpi('Journeys', 'journey_customers', '🧭') }}
+        </div>
+
+        <!-- FOOTFALL -->
+        <div class="chart-section">
+            <h2>Footfall Analytics (Hourly)</h2>
+            <div class="chart-wrap" style="height:300px;">
+                <canvas id="footfallChart"></canvas>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- GENDER PIE -->
+            <div class="chart-section">
+                <h2>Gender Distribution</h2>
+                <div class="chart-wrap" style="height:280px;">
+                    <canvas id="genderChart"></canvas>
+                </div>
+            </div>
+            <!-- AGE BAR -->
+            <div class="chart-section">
+                <h2>Age Distribution</h2>
+                <div class="chart-wrap" style="height:280px;">
+                    <canvas id="ageChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- ZONE RANKING -->
+            <div class="panel">
+                <h2>Zone Ranking</h2>
+                <div id="zone-ranking"><p class="muted">Loading zones…</p></div>
+                <div style="margin-top:16px;">
+                    <span class="muted">Top zones: </span><span id="top-zones">—</span><br>
+                    <span class="muted">Dead zones: </span><span id="dead-zones">—</span>
+                </div>
+            </div>
+            <!-- JOURNEY LIST -->
+            <div class="panel">
+                <h2>Customer Journeys (<span id="journey-total">0</span>)</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Customer</th><th>Age</th><th>Gender</th></tr>
+                    </thead>
+                    <tbody id="journey-body">
+                        <tr><td colspan="3" class="muted">Waiting for customers…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/charts.js"></script>
+</body>
+</html>

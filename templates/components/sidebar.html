@@ -1,0 +1,42 @@
+{# ===================================================== #}
+{# Shared Sidebar Navigation (8 SaaS modules)            #}
+{# Pass active_page to highlight the current item.        #}
+{# ===================================================== #}
+
+<div class="sidebar">
+
+    <h2>AI&nbsp;Retail</h2>
+    <p class="sidebar-sub">Consumer Analytics</p>
+
+    <ul>
+        <li class="{{ 'active' if active_page == 'dashboard' else '' }}">
+            <a href="/">📊 Dashboard</a>
+        </li>
+        <li class="{{ 'active' if active_page == 'sources' else '' }}">
+            <a href="/sources">🎛️ Camera Sources</a>
+        </li>
+        <li class="{{ 'active' if active_page == 'live' else '' }}">
+            <a href="/live">🎥 Live Monitoring</a>
+        </li>
+        <li class="{{ 'active' if active_page == 'zones' else '' }}">
+            <a href="/zones">📐 Zone Analytics</a>
+        </li>
+        <li class="{{ 'active' if active_page == 'heatmaps' else '' }}">
+            <a href="/heatmaps">🔥 Heatmaps</a>
+        </li>
+        <li class="{{ 'active' if active_page == 'customers' else '' }}">
+            <a href="/customers">🧍 Customer Analytics</a>
+        </li>
+        <li class="{{ 'active' if active_page == 'reports' else '' }}">
+            <a href="/reports">📁 Reports</a>
+        </li>
+        <li class="{{ 'active' if active_page == 'settings' else '' }}">
+            <a href="/settings">⚙️ Settings</a>
+        </li>
+    </ul>
+
+    <div class="sidebar-footer">
+        <span class="status-dot"></span> System Online
+    </div>
+
+</div>

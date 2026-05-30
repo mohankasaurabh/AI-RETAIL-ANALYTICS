@@ -1,4 +1,5 @@
 import time
+import threading
 import numpy as np
 
 
@@ -17,6 +18,9 @@ class GlobalIdentityRegistry:
         self.threshold = 0.65
 
         self.timeout = 300
+
+        # shared across concurrent camera workers
+        self._lock = threading.Lock()
 
     # =====================================
     # COSINE SIMILARITY
@@ -135,72 +139,74 @@ class GlobalIdentityRegistry:
         camera_id
     ):
 
-        best_score = 0
+        with self._lock:
 
-        best_identity = None
+            best_score = 0
 
-        # =====================================
-        # SEARCH EXISTING IDS
-        # =====================================
+            best_identity = None
 
-        for identity_id, data in (
+            # =====================================
+            # SEARCH EXISTING IDS
+            # =====================================
 
-            self.identities.items()
-        ):
+            for identity_id, data in (
 
-            score = self.cosine_similarity(
+                self.identities.items()
+            ):
+
+                score = self.cosine_similarity(
+
+                    feature,
+
+                    data["avg_feature"]
+                )
+
+                if score > best_score:
+
+                    best_score = score
+
+                    best_identity = identity_id
+
+            # =====================================
+            # MATCH FOUND
+            # =====================================
+
+            if (
+
+                best_identity is not None
+
+                and
+
+                best_score >= self.threshold
+            ):
+
+                self.update_identity(
+
+                    best_identity,
+
+                    feature
+                )
+
+                self.identities[
+                    best_identity
+                ][
+                    "camera_history"
+                ].add(
+                    camera_id
+                )
+
+                return best_identity
+
+            # =====================================
+            # NEW IDENTITY
+            # =====================================
+
+            return self.create_identity(
 
                 feature,
 
-                data["avg_feature"]
-            )
-
-            if score > best_score:
-
-                best_score = score
-
-                best_identity = identity_id
-
-        # =====================================
-        # MATCH FOUND
-        # =====================================
-
-        if (
-
-            best_identity is not None
-
-            and
-
-            best_score >= self.threshold
-        ):
-
-            self.update_identity(
-
-                best_identity,
-
-                feature
-            )
-
-            self.identities[
-                best_identity
-            ][
-                "camera_history"
-            ].add(
                 camera_id
             )
-
-            return best_identity
-
-        # =====================================
-        # NEW IDENTITY
-        # =====================================
-
-        return self.create_identity(
-
-            feature,
-
-            camera_id
-        )
 
     # =====================================
     # GET IDENTITY
@@ -264,35 +270,37 @@ class GlobalIdentityRegistry:
 
         current_time = time.time()
 
-        remove_ids = []
+        with self._lock:
 
-        for identity_id, data in (
+            remove_ids = []
 
-            self.identities.items()
-        ):
+            for identity_id, data in (
 
-            if (
-
-                current_time
-
-                -
-
-                data["last_seen"]
-
-                >
-
-                self.timeout
+                self.identities.items()
             ):
 
-                remove_ids.append(
+                if (
+
+                    current_time
+
+                    -
+
+                    data["last_seen"]
+
+                    >
+
+                    self.timeout
+                ):
+
+                    remove_ids.append(
+                        identity_id
+                    )
+
+            for identity_id in remove_ids:
+
+                del self.identities[
                     identity_id
-                )
-
-        for identity_id in remove_ids:
-
-            del self.identities[
-                identity_id
-            ]
+                ]
 
     # =====================================
     # DEBUG INFO

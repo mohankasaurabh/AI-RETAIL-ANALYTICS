@@ -1,42 +1,112 @@
 import cv2
-import torch
-import torchvision.transforms as transforms
+import numpy as np
 
-from PIL import Image
-
-from ai_engine.reid.osnet import OSNetReID
+from ai_engine.reid.osnet import (
+    OSNetFeatureExtractor
+)
 
 
 class FeatureExtractor:
 
     def __init__(self):
 
-        self.model = OSNetReID().get_model()
+        self.osnet = (
+            OSNetFeatureExtractor()
+        )
 
-        self.transform = transforms.Compose([
-            transforms.Resize((256, 128)),
-            transforms.ToTensor(),
-        ])
+    # =====================================
+    # EXTRACT PERSON FEATURES
+    # =====================================
 
-    def extract(self, frame, bbox):
+    def extract(
+        self,
+        frame,
+        bbox
+    ):
 
-        x1, y1, x2, y2 = bbox
+        try:
 
-        crop = frame[y1:y2, x1:x2]
+            x1, y1, x2, y2 = bbox
 
-        if crop.size == 0:
+            h, w = frame.shape[:2]
+
+            # =====================================
+            # SAFE BOUNDS
+            # =====================================
+
+            x1 = max(0, x1)
+            y1 = max(0, y1)
+
+            x2 = min(w, x2)
+            y2 = min(h, y2)
+
+            if x2 <= x1:
+
+                return None
+
+            if y2 <= y1:
+
+                return None
+
+            # =====================================
+            # PERSON CROP
+            # =====================================
+
+            crop = frame[
+                y1:y2,
+                x1:x2
+            ]
+
+            if crop.size == 0:
+
+                return None
+
+            # =====================================
+            # RESIZE
+            # =====================================
+
+            crop = cv2.resize(
+                crop,
+                (128, 256)
+            )
+
+            # =====================================
+            # OSNET EMBEDDING
+            # =====================================
+
+            features = (
+                self.osnet.extract(
+                    crop
+                )
+            )
+
+            if features is None:
+
+                return None
+
+            # =====================================
+            # NORMALIZE VECTOR
+            # =====================================
+
+            norm = np.linalg.norm(
+                features
+            )
+
+            if norm == 0:
+
+                return None
+
+            features = (
+                features / norm
+            )
+
+            return features
+
+        except Exception as e:
+
+            print(
+                f"[REID ERROR] "
+                f"{e}"
+            )
+
             return None
-
-        image = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
-
-        image = Image.fromarray(image)
-
-        tensor = self.transform(image)
-
-        tensor = tensor.unsqueeze(0)
-
-        with torch.no_grad():
-
-            features = self.model(tensor)
-
-        return features.numpy()

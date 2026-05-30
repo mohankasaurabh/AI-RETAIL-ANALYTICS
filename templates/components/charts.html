@@ -1,0 +1,15 @@
+{# ===================================================== #}
+{# Chart Card Macro                                       #}
+{# Usage:                                                 #}
+{#   {% from 'components/charts.html' import chart_card %}#}
+{#   {{ chart_card('Hourly Footfall', 'footfallChart') }}#}
+{# ===================================================== #}
+
+{% macro chart_card(title, canvas_id, height=300) %}
+<div class="chart-section">
+    <h2>{{ title }}</h2>
+    <div class="chart-wrap" style="height: {{ height }}px;">
+        <canvas id="{{ canvas_id }}"></canvas>
+    </div>
+</div>
+{% endmacro %}

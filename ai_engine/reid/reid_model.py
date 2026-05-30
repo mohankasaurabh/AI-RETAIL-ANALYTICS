@@ -11,11 +11,18 @@ class ReIDManager:
 
     def __init__(self):
 
+        # =====================================
+        # FEATURE EXTRACTOR
+        # =====================================
+
         self.extractor = (
             FeatureExtractor()
         )
 
-        # Shared Global Registry
+        # =====================================
+        # GLOBAL IDENTITY REGISTRY
+        # =====================================
+
         self.global_registry = (
             global_registry
         )
@@ -31,54 +38,47 @@ class ReIDManager:
         camera_id
     ):
 
-        x1, y1, x2, y2 = bbox
+        try:
 
-        # Safety clamp
-        h, w = frame.shape[:2]
+            # =====================================
+            # FEATURE EXTRACTION
+            # =====================================
 
-        x1 = max(0, x1)
-        y1 = max(0, y1)
+            features = (
+                self.extractor.extract(
 
-        x2 = min(w, x2)
-        y2 = min(h, y2)
+                    frame,
 
-        crop = frame[
-            y1:y2,
-            x1:x2
-        ]
+                    bbox
+                )
+            )
 
-        if crop.size == 0:
+            if features is None:
+
+                return None
+
+            # =====================================
+            # GLOBAL MATCH
+            # =====================================
+
+            global_id = (
+                self.global_registry.match(
+
+                    features,
+
+                    camera_id
+                )
+            )
+
+            return global_id
+
+        except Exception as e:
+
+            print(
+                f"[REID ERROR] {e}"
+            )
 
             return None
-
-        # =====================================
-        # FEATURE EXTRACTION
-        # =====================================
-
-        features = (
-            self.extractor.extract(
-                crop
-            )
-        )
-
-        if features is None:
-
-            return None
-
-        # =====================================
-        # GLOBAL MATCH
-        # =====================================
-
-        global_id = (
-            self.global_registry.match(
-
-                features,
-
-                camera_id
-            )
-        )
-
-        return global_id
 
     # =====================================
     # TOTAL IDENTITIES
@@ -117,7 +117,7 @@ class ReIDManager:
         self.global_registry.cleanup()
 
     # =====================================
-    # STATS
+    # STATISTICS
     # =====================================
 
     def get_statistics(

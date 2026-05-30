@@ -1,395 +1,248 @@
+"""
+=====================================================
+Analytics Service (per-camera namespacing)
+=====================================================
+
+Holds live metric state, now partitioned per camera so the
+concurrent multi-camera engine (Phase 2) can write independent
+state. Backward compatible: callers that omit camera_id write
+to a single DEFAULT_CAMERA bucket, and get_dashboard_metrics()
+with no argument returns an AGGREGATE across all cameras — so
+the existing single-camera dashboard keeps working unchanged.
+
+DB writes go through the batched async writer (thread-safe),
+not a shared Session.
+"""
+
 import time
 
-from backend.database.queries import (
-    DatabaseManager
-)
+from backend.database.db_writer import db_writer
+from backend.database.models import AnalyticsLog, MovementLog
+from backend.database import repository
+
+
+DEFAULT_CAMERA = "default"
+
+# numeric KPI fields that SUM across cameras
+_SUM_KEYS = [
+    "occupancy", "entries", "exits", "active_customers",
+    "zone_occupancy", "total_tracks", "male_count", "female_count",
+    "journey_customers", "queue_length",
+]
+# global counts that should NOT sum (take the max across cameras)
+_MAX_KEYS = [
+    "reid_identities", "multi_camera_customers",
+    "cross_camera_customers", "average_wait", "avg_dwell",
+]
+
+_QUEUE_RANK = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
+
+
+def _empty_metrics():
+    return {
+        "occupancy": 0, "entries": 0, "exits": 0, "active_customers": 0,
+        "zone_occupancy": 0, "total_tracks": 0, "reid_identities": 0,
+        "male_count": 0, "female_count": 0, "journey_customers": 0,
+        "queue_length": 0, "average_wait": 0, "queue_status": "LOW",
+        "cross_camera_customers": 0, "multi_camera_customers": 0,
+        "avg_dwell": 0.0, "zone_data": {},
+    }
 
 
 class AnalyticsService:
 
     def __init__(self):
-
-        # =====================================
-        # LIVE METRICS
-        # =====================================
-
-        self.metrics = {
-
-            "occupancy": 0,
-
-            "entries": 0,
-
-            "exits": 0,
-
-            "active_customers": 0,
-
-            "zone_occupancy": 0,
-
-            "total_tracks": 0,
-
-            "reid_identities": 0,
-
-            "male_count": 0,
-
-            "female_count": 0,
-
-            "journey_customers": 0,
-
-            "queue_length": 0,
-
-            "average_wait": 0,
-
-            "queue_status": "LOW",
-
-            "cross_camera_customers": 0,
-
-            "multi_camera_customers": 0,
-
-            "zone_data": {}
-        }
-
-        # =====================================
-        # CHART HISTORY
-        # =====================================
-
-        self.history = {
-
-            "timestamps": [],
-
-            "occupancy": [],
-
-            "entries": [],
-
-            "zone_occupancy": []
-        }
-
-        # =====================================
-        # TRACK MEMORY
-        # =====================================
-
-        self.seen_track_ids = set()
-
-        # =====================================
-        # CUSTOMER PROFILES
-        # =====================================
-
+        # camera_id -> metrics dict
+        self.cameras = {}
+        # camera_id -> set of seen track ids
+        self.seen_track_ids = {}
+        # global cross-camera customer profiles (keyed by reid/track id)
         self.customer_profiles = {}
 
-        # =====================================
-        # DATABASE
-        # =====================================
-
-        self.db_manager = DatabaseManager()
+        # aggregate rolling history for live charts (back-compat)
+        self.history = {
+            "timestamps": [], "occupancy": [], "entries": [], "zone_occupancy": [],
+        }
 
         self.last_save_time = time.time()
-
         self.save_interval = 5
+
+    # =====================================
+    # PER-CAMERA ACCESS
+    # =====================================
+
+    def _cam(self, camera_id):
+        if camera_id not in self.cameras:
+            self.cameras[camera_id] = _empty_metrics()
+            self.seen_track_ids[camera_id] = set()
+        return self.cameras[camera_id]
+
+    def reset_camera(self, camera_id):
+        self.cameras[camera_id] = _empty_metrics()
+        self.seen_track_ids[camera_id] = set()
 
     # =====================================
     # TRACKING METRICS
     # =====================================
 
-    def update_tracking_metrics(
-        self,
-        tracked_objects
-    ):
+    def update_tracking_metrics(self, tracked_objects, camera_id=DEFAULT_CAMERA):
+        m = self._cam(camera_id)
+        seen = self.seen_track_ids[camera_id]
 
-        current_track_ids = set()
-
+        current = set()
         for obj in tracked_objects:
+            tid = obj["track_id"]
+            current.add(tid)
+            if tid not in seen:
+                seen.add(tid)
+                m["entries"] += 1
 
-            track_id = obj["track_id"]
+        m["occupancy"] = len(current)
+        m["active_customers"] = len(current)
+        m["total_tracks"] = len(seen)
 
-            current_track_ids.add(
-                track_id
-            )
-
-            if (
-                track_id
-                not in
-                self.seen_track_ids
-            ):
-
-                self.seen_track_ids.add(
-                    track_id
-                )
-
-                self.metrics["entries"] += 1
-
-        self.metrics["occupancy"] = len(
-            current_track_ids
-        )
-
-        self.metrics["active_customers"] = len(
-            current_track_ids
-        )
-
-        self.metrics["total_tracks"] = len(
-            self.seen_track_ids
-        )
-
-        self.store_history()
-
-        self.auto_save_analytics()
+        self._store_history()
+        self._auto_save()
 
     # =====================================
-    # AUTO DATABASE SAVE
+    # ZONE / REID / DEMOGRAPHICS / JOURNEY / QUEUE
     # =====================================
 
-    def auto_save_analytics(self):
+    def update_zone_data(self, zone_counts, camera_id=DEFAULT_CAMERA):
+        m = self._cam(camera_id)
+        m["zone_data"] = zone_counts
+        m["zone_occupancy"] = sum(zone_counts.values())
 
-        current_time = time.time()
+    def set_reid_identities(self, count, camera_id=DEFAULT_CAMERA):
+        self._cam(camera_id)["reid_identities"] = count
 
-        if (
-
-            current_time
-            -
-            self.last_save_time
-
-            >=
-
-            self.save_interval
-        ):
-
-            self.db_manager.save_analytics(
-                self.metrics
-            )
-
-            print(
-                "[INFO] Analytics Saved To Database"
-            )
-
-            self.last_save_time = current_time
-
-    # =====================================
-    # MOVEMENT LOGGING
-    # =====================================
-
-    def log_movement(
-        self,
-        track_id,
-        centroid
-    ):
-
-        self.db_manager.save_movement(
-
-            track_id,
-
-            centroid
-        )
-
-    # =====================================
-    # HISTORY
-    # =====================================
-
-    def store_history(self):
-
-        timestamp = time.strftime(
-            "%H:%M:%S"
-        )
-
-        self.history["timestamps"].append(
-            timestamp
-        )
-
-        self.history["occupancy"].append(
-            self.metrics["occupancy"]
-        )
-
-        self.history["entries"].append(
-            self.metrics["entries"]
-        )
-
-        self.history["zone_occupancy"].append(
-            self.metrics["zone_occupancy"]
-        )
-
-        if len(
-            self.history["timestamps"]
-        ) > 30:
-
-            for key in self.history:
-
-                self.history[key].pop(0)
-
-    # =====================================
-    # ZONE ANALYTICS
-    # =====================================
-
-    def update_zone_data(
-        self,
-        zone_counts
-    ):
-
-        self.metrics["zone_data"] = (
-            zone_counts
-        )
-
-        self.metrics[
-            "zone_occupancy"
-        ] = sum(
-            zone_counts.values()
-        )
-
-    # =====================================
-    # REID
-    # =====================================
-
-    def set_reid_identities(
-        self,
-        count
-    ):
-
-        self.metrics[
-            "reid_identities"
-        ] = count
-
-    # =====================================
-    # DEMOGRAPHICS
-    # =====================================
-
-    def update_demographics(
-        self,
-        demographic_results
-    ):
-
-        male = 0
-
-        female = 0
-
-        for result in demographic_results:
-
-            gender = result["gender"]
-
-            if gender == "Man":
-
+    def update_demographics(self, demographic_results, camera_id=DEFAULT_CAMERA):
+        m = self._cam(camera_id)
+        male = female = 0
+        for r in demographic_results:
+            if r.get("gender") == "Man":
                 male += 1
-
             else:
-
                 female += 1
+        m["male_count"] = male
+        m["female_count"] = female
 
-        self.metrics[
-            "male_count"
-        ] = male
-
-        self.metrics[
-            "female_count"
-        ] = female
-
-    # =====================================
-    # CUSTOMER PROFILE
-    # =====================================
-
-    def update_customer_profile(
-        self,
-        demographic_result
-    ):
-
-        if demographic_result is None:
-
+    def update_customer_profile(self, demographic_result):
+        if not demographic_result:
             return
-
-        track_id = (
-            demographic_result[
-                "track_id"
-            ]
-        )
-
-        self.customer_profiles[
-            track_id
-        ] = {
-
-            "age":
-                demographic_result["age"],
-
-            "gender":
-                demographic_result["gender"]
+        # prefer persistent reid_id when available, else track_id
+        key = demographic_result.get("reid_id") or demographic_result.get("track_id")
+        if key is None:
+            return
+        self.customer_profiles[key] = {
+            "age": demographic_result["age"],
+            "gender": demographic_result["gender"],
         }
 
-    # =====================================
-    # CUSTOMER JOURNEY
-    # =====================================
+    def update_journey_metrics(self, total_customers, camera_id=DEFAULT_CAMERA):
+        self._cam(camera_id)["journey_customers"] = total_customers
 
-    def update_journey_metrics(
-        self,
-        total_customers
-    ):
+    def update_queue_metrics(self, queue_length, average_wait, status,
+                             camera_id=DEFAULT_CAMERA):
+        m = self._cam(camera_id)
+        m["queue_length"] = queue_length
+        m["average_wait"] = round(average_wait, 1)
+        m["queue_status"] = status
 
-        self.metrics[
-            "journey_customers"
-        ] = total_customers
+    def update_cross_camera(self, count, camera_id=DEFAULT_CAMERA):
+        self._cam(camera_id)["cross_camera_customers"] = count
 
-    # =====================================
-    # QUEUE ANALYTICS
-    # =====================================
+    def update_multi_camera_metrics(self, count, camera_id=DEFAULT_CAMERA):
+        self._cam(camera_id)["multi_camera_customers"] = count
 
-    def update_queue_metrics(
-        self,
-        queue_length,
-        average_wait,
-        status
-    ):
-
-        self.metrics[
-            "queue_length"
-        ] = queue_length
-
-        self.metrics[
-            "average_wait"
-        ] = round(
-            average_wait,
-            1
-        )
-
-        self.metrics[
-            "queue_status"
-        ] = status
+    def set_avg_dwell(self, seconds, camera_id=DEFAULT_CAMERA):
+        self._cam(camera_id)["avg_dwell"] = round(seconds, 1)
 
     # =====================================
-    # CROSS CAMERA ANALYTICS
+    # MOVEMENT LOGGING (async batched write)
     # =====================================
 
-    def update_cross_camera(
-        self,
-        count
-    ):
-
-        self.metrics[
-            "cross_camera_customers"
-        ] = count
+    def log_movement(self, track_id, centroid, camera_id=DEFAULT_CAMERA):
+        x, y = centroid
+        db_writer.enqueue(MovementLog(track_id=track_id, x=x, y=y))
 
     # =====================================
-    # MULTI CAMERA ANALYTICS
+    # PERSISTENCE (rollup)
     # =====================================
 
-    def update_multi_camera_metrics(
-        self,
-        count
-    ):
-
-        self.metrics[
-            "multi_camera_customers"
-        ] = count
+    def _auto_save(self):
+        now = time.time()
+        if now - self.last_save_time >= self.save_interval:
+            agg = self.aggregate()
+            # legacy table (read by current endpoints)
+            db_writer.enqueue(AnalyticsLog(
+                occupancy=agg["occupancy"], entries=agg["entries"],
+                exits=agg["exits"], active_customers=agg["active_customers"],
+                zone_occupancy=agg["zone_occupancy"],
+                total_tracks=agg["total_tracks"],
+                reid_identities=agg["reid_identities"],
+            ))
+            # new rollup table
+            try:
+                repository.add_snapshot(agg)
+            except Exception as exc:
+                print(f"[ANALYTICS snapshot error] {exc}")
+            self.last_save_time = now
 
     # =====================================
-    # DASHBOARD DATA
+    # HISTORY (aggregate)
     # =====================================
 
-    def get_dashboard_metrics(
-        self
-    ):
-
-        return self.metrics
+    def _store_history(self):
+        agg = self.aggregate()
+        self.history["timestamps"].append(time.strftime("%H:%M:%S"))
+        self.history["occupancy"].append(agg["occupancy"])
+        self.history["entries"].append(agg["entries"])
+        self.history["zone_occupancy"].append(agg["zone_occupancy"])
+        if len(self.history["timestamps"]) > 30:
+            for k in self.history:
+                self.history[k].pop(0)
 
     # =====================================
-    # CHART DATA
+    # AGGREGATION
     # =====================================
 
-    def get_chart_data(
-        self
-    ):
+    def aggregate(self):
+        agg = _empty_metrics()
+        if not self.cameras:
+            return agg
 
+        for m in self.cameras.values():
+            for k in _SUM_KEYS:
+                agg[k] += m.get(k, 0)
+            for k in _MAX_KEYS:
+                agg[k] = max(agg[k], m.get(k, 0))
+            # merge zone data
+            for zname, zcount in (m.get("zone_data") or {}).items():
+                agg["zone_data"][zname] = agg["zone_data"].get(zname, 0) + zcount
+            # highest queue severity wins
+            if _QUEUE_RANK.get(m.get("queue_status", "LOW"), 0) > \
+               _QUEUE_RANK.get(agg["queue_status"], 0):
+                agg["queue_status"] = m["queue_status"]
+
+        return agg
+
+    # =====================================
+    # PUBLIC READS
+    # =====================================
+
+    def get_dashboard_metrics(self, camera_id=None):
+        if camera_id is not None:
+            return dict(self._cam(camera_id))
+        return self.aggregate()
+
+    def get_camera_metrics(self, camera_id):
+        return dict(self._cam(camera_id))
+
+    def list_camera_ids(self):
+        return list(self.cameras.keys())
+
+    def get_chart_data(self):
         return self.history
 
 

@@ -101,6 +101,20 @@ async function loadAnalytics() {
         )
 
         // ==========================
+        // MULTI / CROSS CAMERA
+        // ==========================
+
+        setValue(
+            "cross_camera_customers",
+            data.cross_camera_customers
+        )
+
+        setValue(
+            "multi_camera_customers",
+            data.multi_camera_customers
+        )
+
+        // ==========================
         // ZONE PANEL
         // ==========================
 
@@ -518,15 +532,4 @@ setInterval(
 setInterval(
     loadChartData,
     5000
-)
-
-
-setValue(
-    "cross_camera_customers",
-    data.cross_camera_customers
-)
-
-setValue(
-    "multi_camera_customers",
-    data.multi_camera_customers
 )

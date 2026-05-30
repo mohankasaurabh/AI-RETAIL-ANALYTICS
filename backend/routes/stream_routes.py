@@ -1,18 +1,21 @@
-import cv2
+from flask import (
+    Blueprint,
+    Response,
+    jsonify,
+    request
+)
 
-from flask import Blueprint
-from flask import Response
-from flask import request
-from flask import jsonify
+import cv2
+import time
+import traceback
 
 from ai_engine.stream.camera_manager import (
-    CameraManager
+    camera_manager
 )
 
 from ai_engine.stream.frame_processor import (
     FrameProcessor
 )
-
 
 # =====================================
 # BLUEPRINT
@@ -23,15 +26,11 @@ stream_bp = Blueprint(
     __name__
 )
 
-
 # =====================================
-# COMPONENTS
+# FRAME PROCESSOR
 # =====================================
-
-camera_manager = CameraManager()
 
 frame_processor = FrameProcessor()
-
 
 # =====================================
 # FRAME GENERATOR
@@ -41,49 +40,72 @@ def generate_frames():
 
     while True:
 
-        frame = camera_manager.get_frame()
+        try:
 
-        if frame is None:
+            frame = camera_manager.get_frame()
+
+            if frame is None:
+
+                time.sleep(0.1)
+
+                continue
+
+            processed_frame = (
+
+                frame_processor.process_frame(
+
+                    frame,
+
+                    camera_manager.current_camera
+                )
+            )
+
+            if processed_frame is None:
+
+                continue
+
+            ret, buffer = cv2.imencode(
+
+                ".jpg",
+
+                processed_frame
+            )
+
+            if not ret:
+
+                continue
+
+            frame_bytes = buffer.tobytes()
+
+            yield (
+
+                b"--frame\r\n"
+
+                b"Content-Type: image/jpeg\r\n\r\n"
+
+                +
+
+                frame_bytes
+
+                +
+
+                b"\r\n"
+            )
+
+        except Exception as e:
+
+            print(
+                f"[STREAM ERROR] {e}"
+            )
+
+            traceback.print_exc()
+
+            time.sleep(0.1)
 
             continue
 
-        # =====================================
-        # UNIFIED AI PIPELINE
-        # =====================================
-
-        processed_frame = (
-            frame_processor.process_frame(
-
-                frame,
-
-                camera_manager.current_camera
-            )
-        )
-
-        # Encode frame
-        _, buffer = cv2.imencode(
-
-            ".jpg",
-
-            processed_frame
-        )
-
-        frame_bytes = buffer.tobytes()
-
-        yield (
-
-            b"--frame\r\n"
-
-            b"Content-Type: image/jpeg\r\n\r\n"
-
-            + frame_bytes +
-
-            b"\r\n"
-        )
-
-
 # =====================================
-# VIDEO STREAM
+# VIDEO FEED
 # =====================================
 
 @stream_bp.route("/video_feed")
@@ -94,11 +116,10 @@ def video_feed():
         generate_frames(),
 
         mimetype=(
-            "multipart/x-mixed-replace; "
-            "boundary=frame"
+            "multipart/x-mixed-replace;"
+            " boundary=frame"
         )
     )
-
 
 # =====================================
 # SWITCH CAMERA
@@ -111,17 +132,100 @@ def switch_camera():
         "camera"
     )
 
-    success = camera_manager.switch_camera(
-        camera_id
+    if not camera_id:
+
+        return jsonify({
+
+            "success": False,
+
+            "message":
+                "Camera ID missing"
+        })
+
+    success = (
+
+        camera_manager.switch_camera(
+            camera_id
+        )
     )
 
     return jsonify({
 
         "success": success,
 
-        "camera": camera_id
+        "camera":
+            camera_manager.current_camera
     })
 
+# =====================================
+# CONNECT RTSP
+# =====================================
+
+@stream_bp.route(
+    "/connect_rtsp",
+    methods=["POST"]
+)
+def connect_rtsp():
+
+    try:
+
+        data = request.get_json()
+
+        if not data:
+
+            return jsonify({
+
+                "success": False,
+
+                "message":
+                    "Missing request body"
+            })
+
+        rtsp_url = data.get(
+            "rtsp_url",
+            ""
+        ).strip()
+
+        if not rtsp_url.startswith(
+            "rtsp://"
+        ):
+
+            return jsonify({
+
+                "success": False,
+
+                "message":
+                    "Invalid RTSP URL"
+            })
+
+        camera_manager.set_rtsp_url(
+            rtsp_url
+        )
+
+        success = (
+
+            camera_manager.switch_camera(
+                "rtsp"
+            )
+        )
+
+        return jsonify({
+
+            "success": success,
+
+            "camera": "rtsp"
+        })
+
+    except Exception as e:
+
+        traceback.print_exc()
+
+        return jsonify({
+
+            "success": False,
+
+            "message": str(e)
+        })
 
 # =====================================
 # PAUSE STREAM
@@ -134,9 +238,10 @@ def pause_stream():
 
     return jsonify({
 
+        "success": True,
+
         "status": "paused"
     })
-
 
 # =====================================
 # PLAY STREAM
@@ -149,9 +254,10 @@ def play_stream():
 
     return jsonify({
 
+        "success": True,
+
         "status": "playing"
     })
-
 
 # =====================================
 # RESTART STREAM
@@ -160,13 +266,18 @@ def play_stream():
 @stream_bp.route("/restart_stream")
 def restart_stream():
 
-    camera_manager.restart_camera()
+    success = (
+
+        camera_manager.restart_camera()
+    )
 
     return jsonify({
 
-        "status": "restarted"
-    })
+        "success": success,
 
+        "camera":
+            camera_manager.current_camera
+    })
 
 # =====================================
 # CAMERA STATUS
@@ -177,44 +288,9 @@ def camera_status():
 
     return jsonify({
 
-        "current_camera":
+        "camera":
             camera_manager.current_camera,
 
         "paused":
-            camera_manager.paused,
-
-        "available_cameras":
-            list(
-                camera_manager.sources.keys()
-            )
+            camera_manager.paused
     })
-
-
-@stream_bp.route(
-    "/connect_rtsp",
-    methods=["POST"]
-)
-def connect_rtsp():
-
-    data = request.json
-
-    rtsp_url = data.get(
-        "rtsp_url"
-    )
-
-    camera_manager.sources[
-        "rtsp"
-    ]["path"] = rtsp_url
-
-    success = camera_manager.switch_camera(
-        "rtsp"
-    )
-
-    return jsonify({
-
-        "success": success,
-
-        "camera": "rtsp"
-    })
-
-

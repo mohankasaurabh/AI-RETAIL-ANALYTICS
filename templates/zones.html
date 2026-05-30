@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Zone Analytics | AI Retail Analytics{% endblock %}
+
+{% block content %}
+{% set page_title = 'Zone Analytics' %}
+
+<div class="controls-row" style="justify-content:space-between;">
+    <div class="controls-row" style="margin:0;">
+        <label class="muted" style="align-self:center;">Camera</label>
+        <select id="zone-camera"></select>
+    </div>
+    <span class="muted" id="zone-hint">Pick a tool, click to draw, then Save.</span>
+</div>
+
+<div class="grid-2">
+
+    <!-- ================= EDITOR ================= -->
+    <div class="panel">
+        <h2>Zone Editor</h2>
+
+        <div class="controls-row">
+            <button class="btn-outline" id="tool-polygon" onclick="setTool('polygon')">▱ Polygon</button>
+            <button class="btn-outline" id="tool-rect" onclick="setTool('rect')">▭ Rectangle</button>
+            <button class="btn-outline" onclick="finishShape()">✓ Finish</button>
+            <button class="btn-outline" onclick="clearDraft()">✕ Clear</button>
+        </div>
+
+        <div class="heatmap-stage" id="zone-stage" style="aspect-ratio:16/9;">
+            <img id="zone-bg" alt="snapshot">
+            <canvas id="zone-canvas"></canvas>
+        </div>
+
+        <div class="controls-row" style="margin-top:12px;">
+            <input type="text" id="zone-name" placeholder="Zone name (e.g. Electronics)" style="flex:1;">
+            <select id="zone-kind">
+                <option value="generic">Generic</option>
+                <option value="entrance">Entrance</option>
+                <option value="checkout">Checkout</option>
+                <option value="queue">Queue</option>
+            </select>
+            <input type="color" id="zone-color" value="#00ff99" style="width:48px;padding:4px;">
+            <button class="btn" onclick="saveZone()">Save Zone</button>
+        </div>
+    </div>
+
+    <!-- ================= ZONE LIST + LIVE ================= -->
+    <div class="panel">
+        <h2>Zones &amp; Live Occupancy</h2>
+        <table class="data-table" id="zone-list">
+            <thead><tr><th>Zone</th><th>Kind</th><th>Live</th><th></th></tr></thead>
+            <tbody><tr><td colspan="4" class="muted">Select a camera…</td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ================= METRICS TABLE ================= -->
+<div class="panel">
+    <h2>Zone Metrics</h2>
+    <table class="data-table" id="zone-metrics">
+        <thead><tr>
+            <th>Zone</th><th>Total Visits</th><th>Unique</th>
+            <th>Avg Dwell (s)</th><th>Max Dwell (s)</th><th>Revisits</th>
+        </tr></thead>
+        <tbody><tr><td colspan="6" class="muted">No data yet.</td></tr></tbody>
+    </table>
+</div>
+
+<!-- ================= CHARTS ================= -->
+<div class="grid-2">
+    <div class="chart-section"><h2>Zone Popularity</h2>
+        <div class="chart-wrap" style="height:260px;"><canvas id="popChart"></canvas></div></div>
+    <div class="chart-section"><h2>Average Dwell by Zone</h2>
+        <div class="chart-wrap" style="height:260px;"><canvas id="dwellChart"></canvas></div></div>
+</div>
+<div class="chart-section"><h2>Hourly Zone Activity</h2>
+    <div class="chart-wrap" style="height:240px;"><canvas id="hourlyChart"></canvas></div></div>
+
+<!-- ================= JOURNEY ================= -->
+<div class="grid-2">
+    <div class="panel">
+        <h2>Common Paths</h2>
+        <div id="common-paths"><p class="muted">No journeys yet.</p></div>
+        <h2 style="margin-top:18px;">Least Visited</h2>
+        <div id="least-visited"><p class="muted">—</p></div>
+    </div>
+    <div class="panel">
+        <h2>Conversion Funnel</h2>
+        <div id="funnel"><p class="muted">—</p></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pages/zones.js"></script>
+{% endblock %}
