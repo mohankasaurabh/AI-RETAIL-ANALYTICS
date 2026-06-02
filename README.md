@@ -1,7 +1,7 @@
 # 🛍️ AI Retail Footfall & Consumer Analytics Platform
 
-> Enterprise retail intelligence generated **purely from CCTV cameras** — no
-> RFID, no BLE beacons, no floor sensors, no wearables, no mobile apps.
+> Enterprise retail intelligence generated **purely from CCTV cameras** —
+> no BLE beacons, no floor sensors, no wearables, no mobile apps.
 > Inspired by TangoEye, RetailNext, ShopperTrak and Smart-Mall analytics suites.
 
 A modular, multi-page enterprise SaaS platform that turns ordinary camera feeds
